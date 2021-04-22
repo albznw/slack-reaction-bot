@@ -319,7 +319,7 @@ def remind_in_dm(
 
     invoke_user = users.get(user)
     logging.info(
-        f'{invoke_user["name"]} invoked the shortcut with the emojis {wanted_reactions}')
+        f'{invoke_user["profile"]["real_name"]} invoked the command with the emojis {wanted_reactions}')
 
 
 @app.event("app_mention")
@@ -387,7 +387,7 @@ def mention(client: slack_sdk.web.client.WebClient, event: dict):
     if "remind" in text:
         # Remind command invoked
         # (Yes both can be invoked at the same time)
-        emojis_tmp = text[:text.index("remind")]
+        emojis_tmp = text[text.index(">")+1:text.index("remind")]
         wanted_reactions = extract_emoji_names(emojis_tmp)
         location = text[text.index("remind")+len("remind"):].strip()
 
