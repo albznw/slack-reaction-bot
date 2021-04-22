@@ -1,7 +1,6 @@
 import os
 import logging
 import slack_sdk
-import json
 
 from typing import Set, List
 from dotenv import load_dotenv
@@ -124,7 +123,6 @@ def get_all_user_info(client: slack_sdk.web.client.WebClient) -> dict:
     response = client.users_list()
     users = {}
 
-
     for user in response.data["members"]:
         users[user["id"]] = user
 
@@ -170,7 +168,38 @@ def get_no_react_user_ids_on_message(
     return no_react_user_ids
 
 
-def remind_in_thread(client, user, channel_id, message_ts, wanted_reactions):
+def extract_emoji_names(text: str) -> list:
+    """Extract the emoji names from a text string where the emojis are
+    encapsulated by ::
+
+    Args:
+        text (str): Input text
+
+    Returns:
+        list: The emoji names
+    """
+    emojis_tmp = text.replace(" ", "").split(":")
+    emojis = [emoji for emoji in emojis_tmp if emoji != ""]
+    return emojis
+
+
+def remind_in_thread(
+    client: slack_sdk.web.client.WebClient,
+    user: str,
+    channel_id: str,
+    message_ts: str,
+    wanted_reactions: list
+):
+    """Pings the users that have not reacted with one of the given emojis on
+    the given message in that messages thread.
+
+    Args:
+        client (slack_sdk.web.client.WebClient): Slack client
+        user (str): The invoker user is
+        channel_id (str): The channel where the message was posted
+        message_ts (str): The message timestamp
+        wanted_reactions (list): A list of wanted reactions on the message
+    """
     no_react_user_ids = get_no_react_user_ids_on_message(
         client, channel_id, message_ts, wanted_reactions
     )
@@ -204,10 +233,28 @@ def remind_in_thread(client, user, channel_id, message_ts, wanted_reactions):
 
     users = get_all_user_info(client)
     invoke_user = users.get(user)
-    logging.info(f'{invoke_user["name"]} invoked the shortcut with the emojis {wanted_reactions}')
+    logging.info(
+        f'{invoke_user["name"]} invoked the shortcut with the emojis {wanted_reactions}')
 
 
-def remind_in_dm(client: slack_sdk.web.client.WebClient, user, channel_id, message_ts, wanted_reactions):
+def remind_in_dm(
+    client: slack_sdk.web.client.WebClient,
+    user: str,
+    channel_id: str,
+    message_ts: str,
+    wanted_reactions: list
+):
+    """Sends a direct message to the users that have not reacted on a message
+    with either one of the specified emojis. After that the invoker gets an
+    hidden message from the bot containing the users that were notified.
+
+    Args:
+        client (slack_sdk.web.client.WebClient): Slack client
+        user (str): The invoker user is
+        channel_id (str): The channel where the message was posted
+        message_ts (str): The message timestamp
+        wanted_reactions (list): A list of wanted reactions on the message
+    """
     no_react_user_ids = get_no_react_user_ids_on_message(
         client, channel_id, message_ts, wanted_reactions
     )
@@ -253,11 +300,16 @@ def remind_in_dm(client: slack_sdk.web.client.WebClient, user, channel_id, messa
             c_user = users.get(user_id)
             if c_user is None:
                 pinged_users.append("Unknown user")
+                continue
+
+            display_name = c_user["profile"]["display_name"]
+            if display_name:
+                pinged_users.append(display_name)
             else:
-                pinged_users.append(c_user["name"])
+                pinged_users.append(c_user["profile"]["real_name"])
 
         # Send an Ephemeral message to the user who invoked the shortcut
-        text = f'I just pinged some bitches\n{", ".join(pinged_users)}'
+        text = f'I just pinged these users:\n{", ".join(pinged_users)}'
         client.chat_postEphemeral(
             channel=channel_id,
             user=user,
@@ -266,17 +318,20 @@ def remind_in_dm(client: slack_sdk.web.client.WebClient, user, channel_id, messa
         )
 
     invoke_user = users.get(user)
-    logging.info(f'{invoke_user["name"]} invoked the shortcut with the emojis {wanted_reactions}')
+    logging.info(
+        f'{invoke_user["name"]} invoked the shortcut with the emojis {wanted_reactions}')
 
 
 @app.event("app_mention")
 def mention(client: slack_sdk.web.client.WebClient, event: dict):
+    """Handles the event that gets triggered when someone pings this bot"""
 
+    # Some variables that are used later on
     channel_id = event["channel"]
     invoker = event["user"]
     text = event["text"].lower()
     thread_ts = event.get("thread_ts")
-    
+
     if thread_ts is None:
         # App was not mentioned in a thread
         client.chat_postEphemeral(
@@ -293,25 +348,50 @@ def mention(client: slack_sdk.web.client.WebClient, event: dict):
 
     if "list" in text:
         # List command invoked
-        emojis = text[:text.index("list")].strip()
-        print(emojis)
-        
-        # TODO add list functionality
+        emojis_tmp = text[text.index(">")+1:text.index("list")]
+        wanted_reactions = extract_emoji_names(emojis_tmp)
+
+        no_react_users = get_no_react_user_ids_on_message(
+            client, channel_id, thread_ts, wanted_reactions)
+
+        users = get_all_user_info(client)
+
+        user_names = []
+        for user_id in no_react_users:
+            # Get username of this user id
+            c_user = users.get(user_id)
+            if c_user is None:
+                user_names.append("Unknown user")
+                continue
+
+            display_name = c_user["profile"]["display_name"]
+            if display_name:
+                user_names.append(display_name)
+            else:
+                user_names.append(c_user["profile"]["real_name"])
+
+        formatted_emojis = "".join(f":{emoji}:" for emoji in wanted_reactions)
+        user_names_pretty = ", ".join(user_names)
+        text = \
+            f"Seems like these people have not yet reacted with "\
+            f"{formatted_emojis}: "\
+            f"{user_names_pretty}"
+
+        client.chat_postEphemeral(
+            channel=channel_id,
+            user=invoker,
+            thread_ts=thread_ts,
+            text=text
+        )
 
     if "remind" in text:
         # Remind command invoked
         # (Yes both can be invoked at the same time)
-        emojis = text[:text.index("remind")].strip()
+        emojis_tmp = text[:text.index("remind")]
+        wanted_reactions = extract_emoji_names(emojis_tmp)
         location = text[text.index("remind")+len("remind"):].strip()
 
-        # TODO extract only the emoji NAMES from emojis (:tada: :fire: :parrot:)
-        # and put them in array below
-        wanted_reactions = []
-
-        print(emojis)
-        print(location)
-
-        if location == "thread":
+        if location == "here":
             remind_in_thread(
                 client,
                 invoker,
@@ -332,6 +412,7 @@ def mention(client: slack_sdk.web.client.WebClient, event: dict):
             logging.warning("A user is trying to do something sketchy")
 
     logging.debug("Done with request")
+
 
 # Start the application
 if __name__ == "__main__":
