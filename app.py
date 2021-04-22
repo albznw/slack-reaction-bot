@@ -234,7 +234,7 @@ def remind_in_thread(
     users = get_all_user_info(client)
     invoke_user = users.get(user)
     logging.info(
-        f'{invoke_user["name"]} invoked the shortcut with the emojis {wanted_reactions}')
+        f'{invoke_user["profile"]["real_name"]} invoked the shortcut with the emojis {wanted_reactions}')
 
 
 def remind_in_dm(
