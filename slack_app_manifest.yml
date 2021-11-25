@@ -1,0 +1,33 @@
+_metadata:
+  major_version: 1
+  minor_version: 1
+display_information:
+  name: Your bot name # Bot name
+  description: Your bot description # Bot description
+  background_color: "#e83d84" # Add the background color of your bot
+features:
+  bot_user:
+    display_name: Reaction Bot # The bot display name in Slack
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - chat:write
+      - chat:write.customize
+      - chat:write.public
+      - groups:read
+      - im:read
+      - mpim:read
+      - reactions:read
+      - users:read
+settings:
+  event_subscriptions:
+    request_url: https://api.example.com/slack/events # Your endpoint to where your bot is running
+    bot_events:
+      - app_mention
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
