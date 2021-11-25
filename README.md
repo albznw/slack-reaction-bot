@@ -1,7 +1,7 @@
-# slack-reaction-bot
+# Slack Reaction Bot 🎉✅
 Allows users to see what people in a channel that have not reacted with a certain emoji on a message. It's good for using the reactions as a simply poll or something the like.
 
-# How to use the bot
+# How to use the bot 📜
 In order to invoke the bot you have to start a thread on the message you want to interact with and write on of the following commands:
 ### Remind people of the message by @ing them in the thread:
 `@<bot-name> :fire: remind here`
@@ -13,7 +13,7 @@ The list will be posted in the thread and only visible to the person who invoked
 
 ### Note
 You can add how many emojis as you like to the command. The bot will only remind or list the people that has __not__ reacted with either one of the emojis you add in your command. 
-# Running the application
+# Running the application 🤖
 Before we can run the application we have to create a Slack app, connect it to the backend, start the bot and then installing the Slack app onto your workspace.
 ## Creating the Slack App
 You have to create a Slack app in order to hook this bot up to your workspace. Navigate to [api.slack.com/apps](https://api.slack.com/apps) and press "Create New App"-> "From manifest". Copy and paste the YAML configuration from the file [slack_app_manifest.yml](slack_app_manifest.yml) and then press "create app".
@@ -53,7 +53,7 @@ After pasting the URL into the field Slack is going to check your endpoint. You 
 
 When you have created the application and started the bot's backend we can install the application to the workspace. go ahead and install it to your workspace by navigation to "Basic Information" and pressing "Install to Workspace".
 
-# Development
+# Development 🛠️
 #### Prerequisites
 * pipenv
 
@@ -71,7 +71,7 @@ $ pipenv shell
 
 Happy coding.
 
-## Contributing
+## Contributing ♻️
 If you want to contribute to the project, do so by forking the repository, make your changes and then create a new PR for me to review.
 Here's how you download the repo:
 ```sh
