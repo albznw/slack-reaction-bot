@@ -104,7 +104,15 @@ def get_user_ids_in_channel(client: slack_sdk.web.client.WebClient, channel: str
         channel (str): The channel ID
     """
     response = client.conversations_members(channel=channel)
+
     users = response["members"]
+    cursor = response["response_metadata"]["next_cursor"]
+    while cursor != "":
+        logging.debug("Fetching more users")
+        response = client.conversations_members(channel=channel, cursor=cursor)
+        users.append(response["members"])
+        cursor = response["response_metadata"]["next_cursor"]
+
     users.remove(bot_user_id)  # remove bot from the user list
     logging.info(f"{len(users)} users in channel {channel}")
     return users
