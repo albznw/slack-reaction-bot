@@ -111,6 +111,8 @@ def get_user_ids_in_channel(client: slack_sdk.web.client.WebClient, channel: str
     while cursor != "":
         logging.info("Fetching more users")
         response = client.conversations_members(limit=2, channel=channel, cursor=cursor)
+        logging.info(response)
+
         users.append(response["members"])
         cursor = response["response_metadata"]["next_cursor"]
 
